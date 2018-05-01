@@ -187,8 +187,6 @@ pred5 <- predict(model_gbm2, newdata = test)
 Rsq(test$Sale_Price, pred5)
 
 
-
-
 # Xgboost
 modelLookup(model="xgbLinear")
 xgbTuningGrid = expand.grid(nrounds = c(50, 100), 
@@ -204,13 +202,54 @@ model_xgb4
 pred6 <- predict(model_xgb4, newdata = test)
 Rsq(test$Sale_Price,pred6)
 
+colnames(data)
+
+## Check for any outliers
+
+ggplot(data, aes(x=Garage_Area,y=Sale_Price)) +
+  geom_point()
+# Removing the 'garage area' more than 1250
+
+data <- data[data$Garage_Area<1250,]
+
+
+col_class <- c()
+for (i in 1:length(colnames(data)))
+{
+  col_class[i] <- class(data[[i]])
+  i=i+1
+}
+
+num_col <- colnames(data[col_class=="numeric"])
+fct_col <- colnames(data[!col_class=="numeric"])
+
+## ElasticNet 
+
+glmnetTuningGrid = expand.grid(alpha = seq(0, 1, 0.2),
+                               lambda = seq(0, 1, 0.2))
+model_glmnet1 = train(Sale_Price ~ ., 
+                      data = train,
+                      method = "glmnet",
+                      trControl = ctrl,
+                      tuneGrid = glmnetTuningGrid)
+model_glmnet1
+pred7 <- predict(model_glmnet1, newdata = test)
+Rsq(test$Sale_Price, pred7)
 
 
 
+## Feature selection using rfe in caret
+control <- rfeControl(functions = rfFuncs,
+                      method = "repeatedcv",
+                      repeats = 3,
+                      verbose = FALSE)
+outcome <- "Sale_Price"
+predictiors <- names(data)[!names(data) %in% outcome]
 
+# error in y part of rfe - changed to [[]]
+pred_profile <- rfe(train[,predictiors],train[[outcome]],
+                    rfeControl = control)
+pred_profile
 
-
-
-
-
+## gave top 5 variables
 
